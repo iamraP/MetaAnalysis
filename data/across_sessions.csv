@@ -1,0 +1,7 @@
+﻿study_id,Name,n,r2_eta2,obtained_from,train_direction,mod_direction,multiple_bands,sessions,r
+2,de Zambotti 2012,8,0.03,ANOVA,down,down,SMR,16,0.173205081
+4,Enriquez-Geppert 2013,19,0.259716225,ANOVA,up,up,-,8,0.509623611
+13,Brandmeyer 2020,12,0.49,GLM,up,up,-,1,0.7
+12,Eschmann 2020,17,0.149095656,ANOVA,up,up,-,7,0.386129067
+3,Wang 2013 [old age],8,0.437863883,ANOVA,up,up,-,12,0.66171284
+3,Wang 2013 [young age],8,0.224591526,ANOVA,up,up,-,12,0.473910884

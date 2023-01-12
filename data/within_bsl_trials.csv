@@ -1,0 +1,11 @@
+﻿study_id,n,r2_eta2,train_direction,mod_direction,multiple_bands,sessions,r
+Enriquez-Geppert 2014a,16,0.647991795,up,up,-,8,0.804979375
+Enriquez-Geppert 2013,19,0.511957052,up,up,-,8,0.715511741
+Eschmann 2021,48,0.094134812,up,up,-,1,0.30681397
+Gonçalves 2018 [1],14,0.439077325,up,up,SMR,1,0.662629101
+Gonçalves 2018 [2],15,0.289229087,down,down,SMR,1,0.53780023
+Rozengurt 2017,25,0.45004583,up,up,low beta,1,0.670854552
+Rozengurt 2016,30,0.533,up,up,-,1,0.73006849
+Shtoots 2021 [1],18,0.399072451,up,up,low beta,1,0.631721814
+Shtoots 2021 [2],18,0.159034035,down,up,low beta,1,-0.398790716
+de Zambotti 2012,8,0.495850941,down,down,SMR,16,0.704166842

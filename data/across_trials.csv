@@ -1,0 +1,8 @@
+﻿study_id,Name,n,r2_eta2,train_direction,mod_direction,multiple_bands,sessions,r
+18,de Zambotti 2012,8,0.03,down,down,SMR,16,0.173205081
+4,Enriquez-Geppert 2013,19,0.259716225,up,up,-,8,0.509623611
+20,Brandmeyer 2020,12,0.49,up,up,-,1,0.7
+10,Shoji 2017,1,0.230048902,up,up,-,,0.479634133
+12,Eschmann 2020,17,0.149095656,up,up,-,7,0.386129067
+3,Wang 2013 [1],8,0.437863883,up,up,-,,0.66171284
+3,Wang 2013 [2],8,0.224591526,up,up,-,,0.473910884
