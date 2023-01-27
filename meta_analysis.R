@@ -1,29 +1,105 @@
-#install.packages((c"robumeta","metafor","dplyr")
+install.packages(c("robumeta","metafor","dplyr"))
 #install.packages("rpsychi")
 
 library(rpsychi)
 library(robumeta)
 library(metafor)
-library(dyplr)
+library(dplyr)
 library(effectsize)
 library(tidyr)
 
 
+
+### a little helper function to add Q-test, I^2, and tau^2 estimate info
+mlabfun <- function(text, x) {
+  bquote(paste(.(text),
+                    " (Q = ", .(formatC(x$QE, digits=2, format="f")),
+                    ", df = ", .(x$k - x$p),
+                    ", p ", .(metafor:::.pval(x$QEp, digits=2, showeq=TRUE, sep=" ")), "; ",
+                    "I²", " = ", .(formatC(x$I2, digits=1, format="f")), "%, ",
+                    "tau²", " = ", .(formatC(x$tau2, digits=2, format="f")), ")"))}
+
+
+
+
+
+
+#create a string, with tau², I² and the Q-statistic, which can be added to the plot
+rma_string <- function(rma_res) {
+  text <-paste("Tau²: ",toString(round(rma_res$tau2,digits=4)),", (SE: ",toString(round(rma_res$se.tau2,digits=2)),")\nI²: ",toString(round(rma_res$I2,digits=2)),"%\nQ(df=",toString(round(rma_res$k-rma_res$p,digits=0)),")=",toString(round(rma_res$QE,digits=2)),", p=",toString(round(rma_res$QEp,digits=5)))
+  return(text)rma
+}
+
+
+
+
 setwd("G:/Meine Ablage/PhD/FMT_MetaAnalysis")
 
-data <- read.csv("test_export.csv",sep =",",fileEncoding="UTF-8-BOM")
-data <- drop_na(data)
-data$v <- as.numeric(data$v)
-data_prep <- escalc(measure ="SMD", ,ni =N,yi=d, vi=v,data= data ,slab=study.ID)
+data <- read.csv("export_effect.csv",sep =",",fileEncoding="UTF-8-BOM")
+data$ID <- seq.int(nrow(data))
 
-res <- rma(yi=d,vi=v, data=data)
-predict(res)
-forest(res,cex=.8,header=c("Author(s), Year, [subgroup]"))
+# create the subesets of data acquired in a special way to rename it to merge it later
+mean_SD <- subset(data,!is.na(M_SD))
+group <- subset(data,!is.na(d_group))
+no_correction <- subset(data,!is.na(d_cor_0))
+within_subject_chen <- subset(data,!is.na(d_cor_chen))
+within_subject_conservative <- subset(data,!is.na(d_cor_097))
+within_subject_liberal  <- subset(data,!is.na(d_cor_074))
+
+#rename the columns so they match and drop the empty columns
+
+mean_SD <- mean_SD %>% rename("d" = "M_SD", "v" = "var_M_SD")
+group <- group %>% rename("d" = "d_group", "v" = "var_group")
+no_correction <- no_correction %>% rename("d" = "d_cor_0", "v" = "v_cor_0")
+within_subject_chen <- within_subject_chen %>% rename("d" = "d_cor_chen", "v" = "v_cor_chen")
+within_subject_conservative <- within_subject_conservative %>% rename("d" = "d_cor_097", "v" = "v_cor_097")
+within_subject_liberal  <-  within_subject_liberal %>% rename("d" = "d_cor_074", "v" = "v_cor_074")
 
 
+mean_SD <- mean_SD %>% select(-contains(c("_cor","_group")))
+group <- group %>% select(-contains(c("_cor","_group","M_SD")))
+within_subject_no_correction <- no_correction %>% select(-contains(c("_cor","_group","M_SD")))
+within_subject_chen <- within_subject_chen %>% select(-contains(c("_cor","_group","M_SD")))
+within_subject_conservative <- within_subject_conservative %>% select(-contains(c("_cor","_group","M_SD")))
+within_subject_liberal <- within_subject_liberal %>% select(-contains(c("_cor","_group","M_SD")))
 
 
-rma(data$d.,)
+#merge the dataframes - create four different ones, for the different correction modes
+
+stable <- rbind(mean_SD,group) 
+no_correction <- rbind(stable,within_subject_no_correction)
+chen <- rbind(stable,within_subject_chen)
+conservative <- rbind(stable,within_subject_conservative)
+liberal <- rbind(stable,within_subject_liberal)
+
+### loop over the 4 dataframes
+
+df_list = list(no_correction, chen, conservative, liberal)
+df_names = list("no_correction", "chen", "conservative", "liberal")
+for (i in 1:4 ){
+  data_set = as.data.frame(df_list[i])
+  data_set$names <- paste(data_set$Author,as.character(data_set$Year),sep=", ")
+  V<- vcalc(vi=as.numeric(v), cluster =study.ID , time1 = t1, time2 = t2, grp1 = grp1 , grp2 = grp2, w1 = grp2_size, w2=grp2_size, data=data_set, phi = 0.9)
+  res <- rma.mv(yi=d,V=V, random = ~ 1 | study.ID/effect_type, data=data_set,slab =names)
+  sav <- robust(res, cluster = study.ID, adjust=TRUE,clubSandwich =TRUE)
+  predict(sav)
+  forest(sav, cex=.8,header=c("Author(s), Year"),rows = rev(seq(1,34,2)),
+       order =data_set$names,
+       ilab=cbind(data_set$Direction, data_set$Session, data_set$Subjects, data_set$effect_type), 
+       ilab.xpos=c(-13,-11,-9,-7),
+       ilab.pos = 4,
+       xlim=c(-18,7),
+       alim=c(-3,3),
+       ylim=c(-4,36), 
+       mlab = eval(mlabfun("RE Model", sav)))
+  text(c(-12,-10,-8,-6),c(36,36,36,36.05),cex=.8, c("modulation\ndirection", "Sessions", "Subjects", ">Effect"))
+  text(c(-16.5),c(36.6),cex=1, c(as.character(df_names[i])))
+  }
+
+
+influence(res)
+res
+
 
 #create a string, with tau², I² and the Q-statistic, which can be added to the plot
 rma_string <- function(rma_res) {
@@ -58,7 +134,7 @@ predict(res_w) # confidence intervalls
 confint(res_w)
 
 #check if any of the studies is too influential?
-inf <- influence(res_w)
+inf <- influence(res)
 print(inf)
 plot(inf)
 

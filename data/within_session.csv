@@ -1,9 +1,0 @@
-﻿study_id,Name,n,r2_eta2,obtained_from,train_direction,mod_direction,multiple_bands,sessions,r
-18,de Zambotti 2012,8,0.495850941,t_test,down,down,SMR,16,0.704166842
-4,Enriquez-Geppert 2013,19,0.511957052,t_test,up,up,-,8,0.715511741
-6,Enriquez-Geppert 2014a,16,0.647991795,ANOVA,up,up,-,8,0.804979375
-16,Eschmann 2021,48,0.094134812,t_test,up,up,-,1,0.30681397
-8,Rozengurt 2016,30,0.533,ANOVA,up,up,-,1,0.73006849
-11,Rozengurt 2017,25,0.45004583,ANOVA,up,up,low beta,1,0.670854552
-2,Shtoots 2021 [decrease theta],18,0.159034035,t_test,down,up,low beta,1,-0.398790716
-15,Shtoots 2021 [increase theta],18,0.399072451,t_test,up,up,low beta,1,0.631721814
