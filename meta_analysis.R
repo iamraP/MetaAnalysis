@@ -25,19 +25,77 @@ uni_hetero <- function(text, x) {
 
 #reporting of mutlivariate model heteorgenity
 mv_hetero <- function(text, x, effects) {
+  #calculate the I-sqaured 
+  
+  W <- diag(1/res$vi)
+  X <- model.matrix(res)
+  P <- W - W %*% X %*% solve(t(X) %*% W %*% X) %*% t(X) %*% W
+  x$I2 <- 100 * sum(res$sigma2) / (sum(res$sigma2) + (res$k-res$p)/sum(diag(P)))
+  
   sigma_strings <- c()
   for (i in 1:length(effects)){
-    sigma_strings<- c(sigma_strings, paste(", σ²_", effects[i]," = ", (formatC(x$sigma2[i], digits=2, format="f")),sep=""))
-  }                  
+   sigma_strings<- c(sigma_strings, paste(", σ²_", effects[i]," = ", (formatC(x$sigma2[i], digits=2, format="f")),sep=""))
+  }
   sigma_string <- paste(sigma_strings,collapse="")
+  
   p_value <- metafor:::.pval(x$QEp, digits=2, showeq=TRUE, sep=" ")
   Q_value <- formatC(x$QE, digits=2, format="f")
   
-  paste(text,
-        " (Q(", x$k - x$p,") = ", Q_value ,
-        ", p ", p_value,
-        sigma_string,")")}
+  paste(text, " (Q(", (x$k - x$p),") = ", (formatC(x$QE, digits=2, format="f")),
+               ", p ", (metafor:::.pval(x$QEp, digits=2, showeq=TRUE, sep=" ")),
+               "I²", " = ", (formatC(x$I2, digits=1, format="f")), "%",
+               sigma_string, ")")}
 
+#color forest plot
+
+color_forest_plot <- function(information, rows, x_pos,row_idx) {
+
+  ##color coding for the graphs: 
+  transperent_color_set_DIAD <- c("#5EB5188C","#B2E8878C","#E07B7D8C", "#B5181B8C" )
+  transperent_color_set_dir <- c("#0099998C","#93ffff8C")
+  transperent_color_set_sub <- c("#fec44f8C","#a750178C")
+  transperent_color_set_ses <-  c("#99d8c98C","#2ca25f8C")
+  transperent_color_set_freq <- c("#e34a338C", "#fdbb848C")
+  transperent_color_set_af <- c("#9ebcda8C", "#8856a78C")
+  
+  
+  j=1
+  #direction
+  dir_col <- match(information[j],c("↑","↓"))
+  rect(x_pos[j]-0.25, rows[row_idx]-0.46, x_pos[j]+0.25, rows[row_idx]+0.46,density = NA, col = transperent_color_set_dir[dir_col])
+  #effect subjects
+  j=2
+  sub_col <- match(information[j],c("W","A"))
+  if (!is.na(sub_col)){
+    rect(x_pos[j]-0.25, rows[row_idx]-0.46, x_pos[j]+0.68, rows[row_idx]+0.46,density = NA, col = transperent_color_set_sub[sub_col])
+  }
+  #effect session
+  j=4
+  ses_col <- match(information[j],c("W","A"))
+  if (!is.na(ses_col)){
+    rect(x_pos[j]-0.25, rows[row_idx]-0.46, x_pos[j]+0.68, rows[row_idx]+0.46,density = NA, col = transperent_color_set_ses[ses_col])
+  }
+  #frequency
+  j=6
+  freq_col <- match(information[j],c("F","I"))
+  if (!is.na(freq_col)){
+    rect(x_pos[j]-0.22, rows[row_idx]-0.46, x_pos[j]+0.22, rows[row_idx]+0.46,density = NA, col = transperent_color_set_freq[freq_col])
+  }
+  #add frequency
+  j=7
+  af_col <- match(information[j],c("α","β"))
+  if (!is.na(af_col)){
+    rect(x_pos[j]-0.22, rows[row_idx]-0.46, x_pos[j]+0.22, rows[row_idx]+0.46,density = NA, col = transperent_color_set_af[af_col])
+  }
+  #DIAD
+  for (j in 8:length(information) ){
+    diad_col <- match(information[j],c("++","+","-","--"))
+    if (!is.na(diad_col)){
+      rect(x_pos[j]-0.25, rows[row_idx]-0.46, x_pos[j]+0.25, rows[row_idx]+0.46,density = NA, col = transperent_color_set_DIAD[diad_col])
+    }
+  }
+}
+  
 
 
 
@@ -61,6 +119,23 @@ data <- read.csv("export_effect.csv",sep =",",fileEncoding="UTF-8-BOM")
 
 # index data, so that effects can be disentangled later on
 data$index <- 1:nrow(data)
+
+
+# #relable data 
+data[data=="Across"] <- "A"
+data[data=="Within"] <- "W"   
+data$Direction[data$Direction==-1] <- "↓"
+data$Direction[data$Direction==1] <- "↑"
+data$IF[data$IF==0] <- "F"
+data$IF[data$IF==1] <- "I"
+data$add_freq[data$add_freq=="alpha"] <- "α"
+data$add_freq[data$add_freq=="beta"] <- "β"
+data[data=="Y"] <- "++"
+data[data=="mY"] <- "+"
+data[data=="mN"] <- "-"
+data[data=="N"] <- "--"
+
+
 
 
 print(paste("############## ", correction[correction_mode]," ###################### "))
@@ -104,6 +179,7 @@ data_set <- drop_na(data_set)
 
 ## Overall Model ##########
 
+data_set <- data_set[order(data_set$effect_type),] #data_set[order(as.character(data_set$effect_type))]
 #Variance
 V<- vcalc(vi=as.numeric(v),
           cluster =study.ID ,
@@ -143,11 +219,11 @@ subsets <- list(### Subeffects
   subset(data_set,number.of.sessions == 1),  #single session
   subset(data_set,number.of.sessions > 1),  #multiple   #incl. outlier
   # Modulation direction
-  subset(data_set,Direction == -1),         # Down
-  subset(data_set,Direction == 1),             #Up   #incl. outlier
+  subset(data_set,Direction == "↓"),         # Down
+  subset(data_set,Direction == "↑"),             #Up   #incl. outlier
   # individual frequencies             #
-  subset(data_set,IF == 1),
-  subset(data_set,IF == 0),             # standard freq    #incl. outlier
+  subset(data_set,IF == "I"),
+  subset(data_set,IF == "F"),             # standard freq    #incl. outlier
   # number of frequencies,    
   subset(data_set,n_freq > 1),         # Muti Band
   subset(data_set,n_freq == 1))                  # Single Band #incl. outlier      
@@ -411,44 +487,16 @@ for (t in 1:length(n_grp_rows)){
     
   }
 }
-
-
-#relable data 
-data_set[data_set=="Across"] <- "A"
-data_set[data_set=="Within"] <- "W"   
-data_set$Direction[data_set$Direction==-1] <- "↓"
-data_set$Direction[data_set$Direction==1] <- "↑"
-data_set$IF[data_set$IF==0] <- "F"
-data_set$IF[data_set$IF==1] <- "I"
-data_set$add_freq[data_set$add_freq=="alpha"] <- "α"
-data_set$add_freq[data_set$add_freq=="beta"] <- "β"
-data_set[data_set=="Y"] <- "++"
-data_set[data_set=="mY"] <- "+"
-data_set[data_set=="mN"] <- "-"
-data_set[data_set=="N"] <- "--"
-
-data[data=="Across"] <- "A"
-data[data=="Within"] <- "W"   
-data$Direction[data$Direction==-1] <- "↓"
-data$Direction[data$Direction==1] <- "↑"
-data$IF[data$IF==0] <- "F"
-data$IF[data$IF==1] <- "I"
-data$add_freq[data$add_freq=="alpha"] <- "α"
-data$add_freq[data$add_freq=="beta"] <- "β"
-data[data=="Y"] <- "++"
-data[data=="mY"] <- "+"
-data[data=="mN"] <- "-"
-data[data=="N"] <- "--"
-
+# dev.new(width=1130, height=680,noRStudioGD = TRUE, unit="px")
 
 # set the current model including all studies as the overall model
-overall_model <- eval(parse(text=paste("res_rob",correction[correction_mode],sep = ".")))
+global_model <- eval(parse(text=paste("res_rob",correction[correction_mode],sep = ".")))
 
 #mar:  bottom, left, top and right
 par(oma =c(0,0,0,0), mar= c(6,0,0,12),font=1,cex=0.8)
 
 #create the actual plot 
-waldi <-forest(overall_model,
+waldi <-forest(global_model,
                xlim = c(-16.2,6.9),
                addpred = TRUE,
                col="#9e0000",
@@ -471,9 +519,29 @@ waldi <-forest(overall_model,
                at = seq(-4,4),
                order=effect_type,
                rows=forest_rows,
-               mlab= eval(mv_hetero("REM for All Studies",overall_model,c("s","e"))),
+               mlab= eval(mv_hetero("REM for All Studies",global_model,c("s","e"))),
                psize=0.9,
                header="Author(s) and Year")
+
+
+#forest_order <- (order(global_model$data$effect_type))
+for (idx in 1:length(forest_rows)){ 
+  study <- global_model$data[idx,]
+  information <- c(study$Direction,
+                   study$Subjects,
+                   study$grp1_size,
+                   study$Session,
+                   study$number.of.sessions,
+                   study$IF,
+                   study$add_freq,
+                   study$A,
+                   study$B,
+                   study$C,
+                   study$D)
+  color_forest_plot(information, forest_rows, x_pos,idx)
+}
+  
+
 
 #add missing studies
 additional_studies <- data$index[!data$index %in% data_set$index]
@@ -493,12 +561,14 @@ for (study in 1:length(additional_studies)){
   text(-9*1.8,add_rows[study],pos=4, paste(add_study$Author,add_study$Year,sep=", "),cex=0.8)
   for (j in 1:length(information) ){
     text(x_pos[j],add_rows[study],information[j],cex=0.8)
-  }
+         }
+  color_forest_plot(information, add_rows, x_pos, study)
 }
 
+  
 
 #w/o outlier
-addpoly(res_rob_cleaned, row=-2.4, mlab=eval(mv_hetero("REM w/o influential outlier",res_rob_cleaned,c("s","t"))),addpred=TRUE,col="#a16565")
+addpoly(res_rob_cleaned, row=-2.4, mlab=eval(mv_hetero("REM w/o influential outliers",res_rob_cleaned,c("s","t"))),addpred=TRUE,col="#d28888")
 
 # subgroup plot below 
 y_pos_subgroups <- -2
@@ -522,7 +592,7 @@ for (i in 1: length(subsets_label)){
     #get next subgroup
     subgroup = eval(parse(text=paste(model_options[k],correction[correction_mode],subsets_label[i],sep = ".")))
     #color cleaned models accordingly 
-    if(k==2){col<-"#6579a1"
+    if(k==2){col<-"#c4d2ee"
       description <- "REM w/o influential outliers for"
     } else {col <-"#013394"
       description <- "REM for"}
@@ -568,7 +638,7 @@ par(xpd=NA)
 text(0,-30, "Observed Outcome (Hedge's g)",font=1)
 
 #seperate study DIAD 
-segments(6, -30, x1 = 6, y1 = 32,lty = "dotdash")
+segments(6.85, -30, x1 = 6.85, y1 = 35,lty = "dotdash")
 
 # add description for Study DIAD
 text(c(rep(6.8,4),rep(7.8,5)),seq(-1,-9),pos =4, c(
@@ -584,34 +654,37 @@ text(c(rep(6.8,4),rep(7.8,5)),seq(-1,-9),pos =4, c(
   cex=0.8,font=1)
 
 
+
+
+# 
 ####  mark influential studies  this needs to be adapted by Hand ##### 
 
 ### #  Chen #
-# #text(-14.1,8.2,cex=0.8, c("†")) #Chen
-# text(-7.2,5.5,cex=0.8, c("†"))  # bsl mod
-# text(-6.9,-6,cex=0.8, c("†"))#single
-# #Wang
-# #text(-13.95,16.4,cex=1.4, c("*")) #Wang
-# text(-7.19,-2,cex=1.4, c("*")) # overall model
-# text(-7.35,5.7,cex=1.4, c("*"))  # bsl mod
-# text(-7.1,-8.6,cex=1.4, c("*")) #multi
-# text(-7.8,-14.2,cex=1.4, c("*")) #up
-# text(-7.23,-19.7,cex=1.4, c("*")) #fix
-
-
-
-
-
-### #  Lib  ##
 #text(-14.1,8.2,cex=0.8, c("†")) #Chen
-text(-6.9,5.5,cex=0.8, c("†"))  # bsl mod
-text(-6.5,-6,cex=0.8, c("†")) #single sess
+text(-5.67,5.5,cex=0.8, c("†"))  # bsl mod
+text(-5.3,-6,cex=0.8, c("†"))#single
 #Wang
 #text(-13.95,16.4,cex=1.4, c("*")) #Wang
-text(-6.7,-2,cex=1.4, c("*")) # overall model
-text(-6.7,5.7,cex=1.4, c("*"))  # bsl mod
-text(-6.7,-16.7,cex=1.4, c("*")) #fix
-text(-6.5,-22.2,cex=1.4, c("*")) #single band
+text(-5.42,-2,cex=1.4, c("*")) # overall model
+text(-5.52,5.7,cex=1.4, c("*"))  # bsl mod
+text(-5.45,-8.6,cex=1.4, c("*")) #multi
+text(-4.8,-14.2,cex=1.4, c("*")) #up
+text(-4.24,-19.7,cex=1.4, c("*")) #fix
+
+
+
+
+
+# ### #  Lib  ##
+# #text(-14.1,8.2,cex=0.8, c("†")) #Chen
+# text(-6.9,5.5,cex=0.8, c("†"))  # bsl mod
+# text(-6.5,-6,cex=0.8, c("†")) #single sess
+# #Wang
+# #text(-13.95,16.4,cex=1.4, c("*")) #Wang
+# text(-6.7,-2,cex=1.4, c("*")) # overall model
+# text(-6.7,5.7,cex=1.4, c("*"))  # bsl mod
+# text(-6.7,-16.7,cex=1.4, c("*")) #fix
+# text(-6.5,-22.2,cex=1.4, c("*")) #single band
 
 
 
