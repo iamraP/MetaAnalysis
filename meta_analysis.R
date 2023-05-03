@@ -18,9 +18,10 @@ par(xpd=NA)
 
 #reporting of univariate model heteorgenity
 uni_hetero <- function(text, x) {
+  ital_p <- ","~italic("p ")
   bquote(paste(.(text), " (Q(", .(x$k - x$p),") = ", .(formatC(x$QE, digits=2, format="f")),
-               ", p ", .(metafor:::.pval(x$QEp, digits=2, showeq=TRUE, sep=" ")),
-               "I²", " = ", .(formatC(x$I2, digits=1, format="f")), "%, ",
+               ", p ",(metafor:::.pval(x$QEp, digits=2, showeq=TRUE, sep="")),
+               ", I²", " = ", .(formatC(x$I2, digits=1, format="f")), "%, ",
                "τ²", " = ", .(formatC(x$tau2, digits=2, format="f")), ")"))}
 
 #reporting of mutlivariate model heteorgenity
@@ -42,8 +43,8 @@ mv_hetero <- function(text, x, effects) {
   Q_value <- formatC(x$QE, digits=2, format="f")
   
   paste(text, " (Q(", (x$k - x$p),") = ", (formatC(x$QE, digits=2, format="f")),
-               ", p ", (metafor:::.pval(x$QEp, digits=2, showeq=TRUE, sep=" ")),
-               "I²", " = ", (formatC(x$I2, digits=1, format="f")), "%",
+               ", p ", (metafor:::.pval(x$QEp, digits=2, showeq=TRUE, sep="")),
+               ", I²", " = ", (formatC(x$I2, digits=1, format="f")), "%",
                sigma_string, ")")}
 
 #color forest plot
@@ -58,7 +59,7 @@ color_forest_plot <- function(information, rows, x_pos,row_idx) {
   transperent_color_set_freq <- c("#e34a338C", "#fdbb848C")
   transperent_color_set_af <- c("#9ebcda8C", "#8856a78C")
   
-  
+
   j=1
   #direction
   dir_col <- match(information[j],c("↑","↓"))
@@ -519,7 +520,7 @@ waldi <-forest(global_model,
                at = seq(-4,4),
                order=effect_type,
                rows=forest_rows,
-               mlab= eval(mv_hetero("REM for All Studies",global_model,c("s","e"))),
+               mlab= eval(mv_hetero("REM for global effect",global_model,c("s","e"))),
                psize=0.9,
                header="Author(s) and Year")
 
@@ -613,6 +614,7 @@ text(c(-7.8,-6.6,-5.3,-4,8.5),33, pos=3,cex=.8, c("Direction",
                                                   "Sessions",
                                                   "Frequency",
                                                   "Study DIAD - Risk of Bias"))
+text(4,32, pos=3,cex=.8, c("Weight"))
 
 # Add sub headers for columns
 text(c(x_pos[2:6],-3.65 ,x_pos[8:12]),32,pos=3,cex=.7, c("Effect",
@@ -641,17 +643,13 @@ text(0,-30, "Observed Outcome (Hedge's g)",font=1)
 segments(6.85, -30, x1 = 6.85, y1 = 35,lty = "dotdash")
 
 # add description for Study DIAD
-text(c(rep(6.8,4),rep(7.8,5)),seq(-1,-9),pos =4, c(
-  "(A) Fit between Concept & Operations",
-  "(B) Clarity of Causal Inference",
-  "(C) Generalizability of Findings",
-  "(D) Precision of Outcome Estimation",
+text(c(rep(7.8,5)),seq(-2,-6),pos =4, c(
   "Ratings:",
   "++ : \"Yes\"",
   "+  : \"Maybe Yes\"",
   "-  : \"Maybe No\"",
   "-- : \"No\""),
-  cex=0.8,font=1)
+  cex=0.9,font=1)
 
 
 
@@ -661,15 +659,15 @@ text(c(rep(6.8,4),rep(7.8,5)),seq(-1,-9),pos =4, c(
 
 ### #  Chen #
 #text(-14.1,8.2,cex=0.8, c("†")) #Chen
-text(-5.67,5.5,cex=0.8, c("†"))  # bsl mod
-text(-5.3,-6,cex=0.8, c("†"))#single
+text(-5.6,5.5,cex=0.8, c("†"))  # bsl mod
+text(-5.2,-6,cex=0.8, c("†"))#single
 #Wang
 #text(-13.95,16.4,cex=1.4, c("*")) #Wang
-text(-5.42,-2,cex=1.4, c("*")) # overall model
-text(-5.52,5.7,cex=1.4, c("*"))  # bsl mod
-text(-5.45,-8.6,cex=1.4, c("*")) #multi
-text(-4.8,-14.2,cex=1.4, c("*")) #up
-text(-4.24,-19.7,cex=1.4, c("*")) #fix
+text(-5.34,-2,cex=1.4, c("*")) # overall model
+text(-5.42,5.7,cex=1.4, c("*"))  # bsl mod
+text(-5.35,-8.6,cex=1.4, c("*")) #multi
+text(-4.7,-14.2,cex=1.4, c("*")) #up
+text(-4.14,-19.7,cex=1.4, c("*")) #fix
 
 
 
@@ -704,12 +702,22 @@ text(-4.24,-19.7,cex=1.4, c("*")) #fix
 # dev.print(pdf, file=eval(paste("Diagnostics/Forest_",correction[correction_mode],"_clean",remove_outliers,".pdf",sep="")))
 # 
 # ### Asess Publication bias ######
-# #Publication bias
-# 
-# funnel(res_rob)
+# #Publication bias Funnel plot
+
+#labels to numbers 
+dev.off()
+slab_funnel = data.frame(c(global_model$slab),seq(length(global_model$slab)))
+names(slab_funnel)  <- c("name","id")
+par(font=1,cex=0.8,srt=25)
+funnel(global_model, xlim =c(-1.8,4.8),xlab = "Observed Outcome (Hedges'g)", ylab ="Standard Error (SE)",label = "all",slab=slab_funnel$id,offset =0.8)
+par(font=1,cex=0.7,srt=0)
+rect(2.4,0.43,4.9,-0.005,density = NA, col = "#ffffff",border="black")
+text(2.6,seq(0.01,0.41,0.025), slab_funnel$id,adj=0)
+text(2.9,seq(0.01,0.41,0.025), slab_funnel$name,adj=0)
+
 # dev.print(pdf, file=eval(paste("Diagnostics/funnel_",correction[correction_mode],"_clean",remove_outliers,".pdf",sep="")))
 # #fail safe n
-# print(fsn(yi=g, vi = v,data=data_set,type="Orwin",target =))
+print(fsn(yi=g, vi = v,data=data_set,type="Orwin",target =0.2))
 # 
 # #Rank Correlation Test
 # print(ranktest(res_rob))
