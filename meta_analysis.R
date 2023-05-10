@@ -20,7 +20,7 @@ par(xpd=NA)
 uni_hetero <- function(text, x) {
   ital_p <- ","~italic("p ")
   bquote(paste(.(text), " (Q(", .(x$k - x$p),") = ", .(formatC(x$QE, digits=2, format="f")),
-               ", p ",(metafor:::.pval(x$QEp, digits=2, showeq=TRUE, sep="")),
+               ", p ", .(metafor:::.pval(x$QEp, digits=2, showeq=TRUE, sep="")),
                ", I²", " = ", .(formatC(x$I2, digits=1, format="f")), "%, ",
                "τ²", " = ", .(formatC(x$tau2, digits=2, format="f")), ")"))}
 
@@ -102,7 +102,7 @@ color_forest_plot <- function(information, rows, x_pos,row_idx) {
 
 
 ############# SETTINGS #############
-correction_mode = 1
+correction_mode = 3
 remove_outliers <- TRUE
 
 effects <- list("mod", "bsl_pre_post", "bsl_mod")
@@ -112,7 +112,7 @@ correction <- c("chen", "con", "lib")
 ##Get Data 
 
 
-setwd("G:/Meine Ablage/PhD/FMT_MetaAnalysis")
+setwd("G:/Meine Ablage/PhD/Neurofeedback/FMT_MetaAnalysis")
 data <- read.csv("export_effect.csv",sep =",",fileEncoding="UTF-8-BOM")
 
 
@@ -252,9 +252,10 @@ n_grp_rows <- c()
 outlier_subsets <- list() # subsets without influential outliers - Inspect all of them manually before excluding them!
 outlier_subsets_labels <-list()  # labels for subsets without influential outliers
 
-#sink(file = "inf_out_dia.txt") # store evaluation in text file 
-sink(file = "test_ef.txt")
-# iterate over all subsets and control for influential outliers
+
+# iterate over all subsets and control for influential outliers#
+#save the results in a text file
+sink(file = "inf_out_dia.txt")
 for (k in 1:length(subsets)){
   # print name of subset
   sub_set <-subsets[[k]]
@@ -279,7 +280,7 @@ for (k in 1:length(subsets)){
               data = sub_set,
               phi = 0.9)
     #set random effects according to included  studies
-    if (sum(duplicated(sub_set$effect_type) >0) & sum(duplicated(sub_set$study.ID)) > 0 ){ 
+    if ((sum(duplicated(sub_set$effect_type)) >0 & !subsets_label[k] %in% effects) & sum(duplicated(sub_set$study.ID)) > 0 ){ 
       res <- rma.mv(yi = as.numeric(g),
                     V = V,
                     random = ~ 1 | study.ID/effect_type,
@@ -291,7 +292,7 @@ for (k in 1:length(subsets)){
                     random = ~ 1 | study.ID,
                     data=sub_set,
                     slab =names)
-    }else if (sum(duplicated(sub_set$effect_type)) > 0 ){
+    }else if (sum(duplicated(sub_set$effect_type)) >0 & !subsets_label[k] %in% effects){
       res <- rma.mv(yi = as.numeric(g),
                     V = V,
                     random = ~ 1 | effect_type,
@@ -405,7 +406,7 @@ res_rob_cleaned <- robust(res_cleaned,
 
 for (k in 1:length(outlier_subsets)){
   sub_set <- outlier_subsets[[k]]
-  if ((sum(duplicated(sub_set$study.ID)) > 0 | (sum(duplicated(sub_set$effect_type)) >0 & !subsets_label[k] %in% effects) )) {
+  if ((sum(duplicated(sub_set$study.ID)) > 0 | (sum(duplicated(sub_set$effect_type)) >0 & !outlier_subsets_labels[k] %in% effects) )) {
     V<- vcalc(vi=as.numeric(v),
               cluster =study.ID ,
               time1 = t1,
@@ -417,7 +418,7 @@ for (k in 1:length(outlier_subsets)){
               data = sub_set,
               phi = 0.9)
     #set random effects according to included  studies
-    if (sum(duplicated(sub_set$effect_type) >0) & sum(duplicated(sub_set$study.ID)) > 0 & !subsets_label[k] %in% effects ){ 
+    if (sum(duplicated(sub_set$effect_type) >0) & sum(duplicated(sub_set$study.ID)) > 0 & !outlier_subsets_labels[k] %in% effects ){ 
       res <- rma.mv(yi = as.numeric(g),
                     V = V,
                     random = ~ 1 | study.ID/effect_type,
@@ -429,7 +430,7 @@ for (k in 1:length(outlier_subsets)){
                     random = ~ 1 | study.ID,
                     data=sub_set,
                     slab =names)
-    }else if (sum(duplicated(sub_set$effect_type)) > 0 ){
+    }else if (sum(duplicated(sub_set$study.ID)) > 0 & !outlier_subsets_labels[k] %in% effects){
       res <- rma.mv(yi = as.numeric(g),
                     V = V,
                     random = ~ 1 | effect_type,
@@ -490,8 +491,11 @@ for (t in 1:length(n_grp_rows)){
 }
 # dev.new(width=1130, height=680,noRStudioGD = TRUE, unit="px")
 
-# set the current model including all studies as the overall model
+# set the current model including all studies as the global model
 global_model <- eval(parse(text=paste("res_rob",correction[correction_mode],sep = ".")))
+
+
+### Plotting ####
 
 #mar:  bottom, left, top and right
 par(oma =c(0,0,0,0), mar= c(6,0,0,12),font=1,cex=0.8)
@@ -569,7 +573,7 @@ for (study in 1:length(additional_studies)){
   
 
 #w/o outlier
-addpoly(res_rob_cleaned, row=-2.4, mlab=eval(mv_hetero("REM w/o influential outliers",res_rob_cleaned,c("s","t"))),addpred=TRUE,col="#d28888")
+addpoly(res_rob_cleaned, row=-2.4, mlab=eval(mv_hetero("REM w/o influential outliers",res_rob_cleaned,c("s","e"))),addpred=TRUE,col="#d28888")
 
 # subgroup plot below 
 y_pos_subgroups <- -2
@@ -655,59 +659,56 @@ text(c(rep(7.8,5)),seq(-2,-6),pos =4, c(
 
 
 # 
-####  mark influential studies  this needs to be adapted by Hand ##### 
+# mark influential studies manually (currently set to scaling of A4)##### 
+if (correction_mode==1){
+  ### #  Chen #
+  #text(-14.1,8.2,cex=0.8, c("†")) #Chen
+  text(-5.6,5.5,cex=0.8, c("†"))  # bsl mod
+  text(-5.2,-6,cex=0.8, c("†"))#single
+  #Wang
+  #text(-13.95,16.4,cex=1.4, c("*")) #Wang
+  text(-5.34,-2,cex=1.4, c("*")) # overall model
+  text(-5.42,5.7,cex=1.4, c("*"))  # bsl mod
+  text(-5.35,-8.6,cex=1.4, c("*")) #multi
+  text(-4.7,-14.2,cex=1.4, c("*")) #up
+  text(-4.14,-19.7,cex=1.4, c("*")) #fix
+  
+  } else if (correction_mode == 2){
 
-### #  Chen #
-#text(-14.1,8.2,cex=0.8, c("†")) #Chen
-text(-5.6,5.5,cex=0.8, c("†"))  # bsl mod
-text(-5.2,-6,cex=0.8, c("†"))#single
-#Wang
-#text(-13.95,16.4,cex=1.4, c("*")) #Wang
-text(-5.34,-2,cex=1.4, c("*")) # overall model
-text(-5.42,5.7,cex=1.4, c("*"))  # bsl mod
-text(-5.35,-8.6,cex=1.4, c("*")) #multi
-text(-4.7,-14.2,cex=1.4, c("*")) #up
-text(-4.14,-19.7,cex=1.4, c("*")) #fix
-
-
-
-
-
-# ### #  Lib  ##
-# #text(-14.1,8.2,cex=0.8, c("†")) #Chen
-# text(-6.9,5.5,cex=0.8, c("†"))  # bsl mod
-# text(-6.5,-6,cex=0.8, c("†")) #single sess
-# #Wang
-# #text(-13.95,16.4,cex=1.4, c("*")) #Wang
-# text(-6.7,-2,cex=1.4, c("*")) # overall model
-# text(-6.7,5.7,cex=1.4, c("*"))  # bsl mod
-# text(-6.7,-16.7,cex=1.4, c("*")) #fix
-# text(-6.5,-22.2,cex=1.4, c("*")) #single band
-
-
-
-# ### #  Con #
-# #text(-14.1,8.2,cex=0.8, c("†")) #Tseng
-# text(-6.7,-20.7,cex=0.8, c("†"))#  mutli
-# #Wang
-# #text(-13.95,16.4,cex=1.4, c("*")) #Wang
-# text(-6.8,-2,cex=1.4, c("*")) #overall
-# text(-6.7,-16.6,cex=1.4, c("*")) #fix
-# text(-7.4,-11.2,cex=1.4, c("*")) #up
-
+  ### #  Con #
+  #text(-14.1,8.2,cex=0.8, c("†")) #Tseng
+  text(-5.3,-20.7,cex=0.8, c("†"))#  multi
+  #Wang
+  #text(-13.95,16.4,cex=1.4, c("*")) #Wang
+  text(-5.3,-2,cex=1.4, c("*")) #overall
+  text(-5.4,-16.6,cex=1.4, c("*")) #fix
+  text(-6.1,-11.2,cex=1.4, c("*")) #up
+  
+  }else if (correction_mode == 3){
+  
+  ### #  Lib  ##
+  #text(-14.1,8.2,cex=0.8, c("†")) #Chen
+  text(-5.6,5.5,cex=0.8, c("†"))  # bsl mod
+  text(-5.25,-6,cex=0.8, c("†")) #single sess
+  #Wang
+  #text(-13.95,16.4,cex=1.4, c("*")) #Wang
+  text(-5.34,-2,cex=1.4, c("*")) # overall model
+  text(-5.4,5.7,cex=1.4, c("*"))  # bsl mod
+  text(-5.45,-16.7,cex=1.4, c("*")) #fix
+  text(-3.8,-22.2,cex=1.4, c("*")) #single band
+}
 
 
-
-# 
-# dev.print(pdf, file=eval(paste("Diagnostics/Forest_",correction[correction_mode],"_clean",remove_outliers,".pdf",sep="")))
-# 
-# ### Asess Publication bias ######
+# ### Assessment of Publication bias ######
 # #Publication bias Funnel plot
 
 #labels to numbers 
-dev.off()
 slab_funnel = data.frame(c(global_model$slab),seq(length(global_model$slab)))
 names(slab_funnel)  <- c("name","id")
+
+#reset all design settings
+dev.off()
+
 par(font=1,cex=0.8,srt=25)
 funnel(global_model, xlim =c(-1.8,4.8),xlab = "Observed Outcome (Hedges'g)", ylab ="Standard Error (SE)",label = "all",slab=slab_funnel$id,offset =0.8)
 par(font=1,cex=0.7,srt=0)
@@ -717,7 +718,8 @@ text(2.9,seq(0.01,0.41,0.025), slab_funnel$name,adj=0)
 
 # dev.print(pdf, file=eval(paste("Diagnostics/funnel_",correction[correction_mode],"_clean",remove_outliers,".pdf",sep="")))
 # #fail safe n
-print(fsn(yi=g, vi = v,data=data_set,type="Orwin",target =0.2))
+# print(fsn(yi=g, vi = v,data=data_set)
+# print(fsn(yi=g, vi = v,data=data_set,type="Orwin",target =0.2))
 # 
 # #Rank Correlation Test
 # print(ranktest(res_rob))

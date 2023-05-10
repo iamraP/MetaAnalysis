@@ -3,7 +3,7 @@
 par(xpd=NA)
 
 ############# SETTINGS #############
-correction_mode = 1
+correction_mode = 2
 remove_outliers <- TRUE
 
 
