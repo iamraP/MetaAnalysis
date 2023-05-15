@@ -28,10 +28,10 @@ uni_hetero <- function(text, x) {
 mv_hetero <- function(text, x, effects) {
   #calculate the I-sqaured 
   
-  W <- diag(1/res$vi)
-  X <- model.matrix(res)
+  W <- diag(1/x$vi)
+  X <- model.matrix(x)
   P <- W - W %*% X %*% solve(t(X) %*% W %*% X) %*% t(X) %*% W
-  x$I2 <- 100 * sum(res$sigma2) / (sum(res$sigma2) + (res$k-res$p)/sum(diag(P)))
+  x$I2 <- 100 * sum(x$sigma2) / (sum(x$sigma2) + (x$k-x$p)/sum(diag(P)))
   
   sigma_strings <- c()
   for (i in 1:length(effects)){
@@ -200,6 +200,9 @@ res <- rma.mv(yi = as.numeric(g),
               data=data_set,
               slab =names)
 
+# # add name tags for the plot
+data_set$names <- res$slab
+
 assign(paste("res_rob",correction[correction_mode],sep = "."), res)
 
 #the cluster robust estimation
@@ -356,15 +359,15 @@ sink(file = NULL)
 
 # ############### SUBSET OUTLIER EVALUATION - INVESTIGATE BY HAND!! ############## 
 
-# res_investigate <- res_rob
-# 
-# # # estimate variance
-# profile(res_investigate,sigma=1)
-# dev.print(pdf, file=eval(paste("Diagnostics/profile_studyID_",correction[correction_mode],"_clean",remove_outliers,".pdf",sep="")))
-# profile(res_investigate,sigma=2)
-# dev.print(pdf, file=eval(paste("Diagnostics/profile_effectType_",correction[correction_mode],"_clean",remove_outliers,".pdf",sep="")))
-# 
-# 
+res_investigate <- res_rob
+
+# # estimate variance
+profile(res_investigate,sigma=1)
+dev.print(pdf, file=eval(paste("profile_studyID_",correction[correction_mode],"_clean",remove_outliers,".pdf",sep="")))
+profile(res_investigate,sigma=2)
+dev.print(pdf, file=eval(paste("profile_effectType_",correction[correction_mode],"_clean",remove_outliers,".pdf",sep="")))
+
+
 # 
 # 
 # 
@@ -502,7 +505,7 @@ par(oma =c(0,0,0,0), mar= c(6,0,0,12),font=1,cex=0.8)
 
 #create the actual plot 
 waldi <-forest(global_model,
-               xlim = c(-16.2,6.9),
+               xlim = c(-16.2,7.1),
                addpred = TRUE,
                col="#9e0000",
                ilab = cbind(data_set$Direction,
@@ -517,7 +520,7 @@ waldi <-forest(global_model,
                             data_set$C,
                             data_set$D), 
                xlab = c(""),
-               showweights = TRUE,
+               showweights = FALSE,
                ilab.xpos = x_pos,
                ylim=y_lim,
                steps = 9,
@@ -528,6 +531,8 @@ waldi <-forest(global_model,
                psize=0.9,
                header="Author(s) and Year")
 
+
+text(4.85,-1,cex=0.8,pos=2, (metafor:::.pval(global_model$pval, digits=2, showeq=FALSE, sep=" "))) 
 
 #forest_order <- (order(global_model$data$effect_type))
 for (idx in 1:length(forest_rows)){ 
@@ -574,6 +579,7 @@ for (study in 1:length(additional_studies)){
 
 #w/o outlier
 addpoly(res_rob_cleaned, row=-2.4, mlab=eval(mv_hetero("REM w/o influential outliers",res_rob_cleaned,c("s","e"))),addpred=TRUE,col="#d28888")
+text(4.85,-2.4,cex=0.8,pos=2, (metafor:::.pval(res_rob_cleaned$pval, digits=2, showeq=FALSE, sep=" "))) 
 
 # subgroup plot below 
 y_pos_subgroups <- -2
@@ -603,22 +609,25 @@ for (i in 1: length(subsets_label)){
       description <- "REM for"}
     if (is.null(subgroup$random)){
       addpoly(subgroup, y_pos_subgroups, mlab=eval(uni_hetero(paste(description, subsets_label[i], sep=" "),subgroup)),addpred=TRUE,col=col)
+      text(4.85,y_pos_subgroups,cex=0.8,pos=2, (metafor:::.pval(subgroup$pval, digits=2, showeq=FALSE, sep=" "))) 
     } else if (grepl("effect_type",subgroup$random)) {
       addpoly(subgroup, y_pos_subgroups, mlab=eval(mv_hetero(paste(description, subsets_label[i], sep=" "),subgroup,c("s", "e"))),addpred=TRUE,col=col)
+      text(4.85,y_pos_subgroups,cex=0.8,pos=2, (metafor:::.pval(subgroup$pval, digits=2, showeq=FALSE, sep=" "))) 
     } else{
       addpoly(subgroup, y_pos_subgroups, mlab=eval(mv_hetero(paste(description, subsets_label[i], sep=" "),subgroup,c("s"))),addpred=TRUE,col=col)
+      text(4.85,y_pos_subgroups,cex=0.8,pos=2, (metafor:::.pval(subgroup$pval, digits=2, showeq=FALSE, sep=" "))) 
     }
   }
 }
 
 
 # Add headers for columns
-text(c(-7.8,-6.6,-5.3,-4,8.5),33, pos=3,cex=.8, c("Direction",
+text(c(-7.8,-6.6,-5.3,-4,8.95),33, pos=3,cex=.8, c("Direction",
                                                   "Subjects",
                                                   "Sessions",
                                                   "Frequency",
                                                   "Study DIAD - Risk of Bias"))
-text(4,32, pos=3,cex=.8, c("Weight"))
+text(4.3,32, pos=3,cex=.8, c("p-value"))
 
 # Add sub headers for columns
 text(c(x_pos[2:6],-3.65 ,x_pos[8:12]),32,pos=3,cex=.7, c("Effect",
@@ -641,10 +650,10 @@ text(-16, rev(header_rows), pos=4, c("Beginning vs. Ending of Neurofeedback",
 par(xpd=NA)
 
 # xlabel 
-text(0,-30, "Observed Outcome (Hedge's g)",font=1)
+text(0,-30, "Observed Outcome (Hedges' g)",font=1)
 
 #seperate study DIAD 
-segments(6.85, -30, x1 = 6.85, y1 = 35,lty = "dotdash")
+segments(7.2, -30, x1 = 7.2, y1 = 35,lty = "dotdash")
 
 # add description for Study DIAD
 text(c(rep(7.8,5)),seq(-2,-6),pos =4, c(
@@ -663,46 +672,46 @@ text(c(rep(7.8,5)),seq(-2,-6),pos =4, c(
 if (correction_mode==1){
   ### #  Chen #
   #text(-14.1,8.2,cex=0.8, c("†")) #Chen
-  text(-5.6,5.5,cex=0.8, c("†"))  # bsl mod
-  text(-5.2,-6,cex=0.8, c("†"))#single
+  text(-5.5,5.5,cex=0.8, c("†"))  # bsl mod
+  text(-5.7,-6,cex=0.8, c("†"))#single
   #Wang
   #text(-13.95,16.4,cex=1.4, c("*")) #Wang
-  text(-5.34,-2,cex=1.4, c("*")) # overall model
-  text(-5.42,5.7,cex=1.4, c("*"))  # bsl mod
-  text(-5.35,-8.6,cex=1.4, c("*")) #multi
-  text(-4.7,-14.2,cex=1.4, c("*")) #up
-  text(-4.14,-19.7,cex=1.4, c("*")) #fix
+  text(-5.14,-2,cex=1.4, c("*")) # overall model
+  text(-5.32,5.7,cex=1.4, c("*"))  # bsl mod
+  text(-3.85,-8.6,cex=1.4, c("*")) #multi
+  text(-4.6,-14.2,cex=1.4, c("*")) #up
+  text(-4.04,-19.7,cex=1.4, c("*")) #fix
   
   } else if (correction_mode == 2){
 
   ### #  Con #
   #text(-14.1,8.2,cex=0.8, c("†")) #Tseng
-  text(-5.3,-20.7,cex=0.8, c("†"))#  multi
+  text(-3.8,-20.7,cex=0.8, c("†"))#  multi
   #Wang
   #text(-13.95,16.4,cex=1.4, c("*")) #Wang
-  text(-5.3,-2,cex=1.4, c("*")) #overall
-  text(-5.4,-16.6,cex=1.4, c("*")) #fix
-  text(-6.1,-11.2,cex=1.4, c("*")) #up
+  text(-5.2,-2,cex=1.4, c("*")) #overall
+  text(-3.9,-16.6,cex=1.4, c("*")) #fix
+  text(-4.6,-11.2,cex=1.4, c("*")) #up
   
   }else if (correction_mode == 3){
   
   ### #  Lib  ##
   #text(-14.1,8.2,cex=0.8, c("†")) #Chen
-  text(-5.6,5.5,cex=0.8, c("†"))  # bsl mod
-  text(-5.25,-6,cex=0.8, c("†")) #single sess
+  text(-5.42,5.5,cex=0.8, c("†"))  # bsl mod
+  text(-3.75,-6,cex=0.8, c("†")) #single sess
   #Wang
   #text(-13.95,16.4,cex=1.4, c("*")) #Wang
-  text(-5.34,-2,cex=1.4, c("*")) # overall model
-  text(-5.4,5.7,cex=1.4, c("*"))  # bsl mod
-  text(-5.45,-16.7,cex=1.4, c("*")) #fix
-  text(-3.8,-22.2,cex=1.4, c("*")) #single band
+  text(-5.22,-2,cex=1.4, c("*")) # overall model
+  text(-5.54,5.7,cex=1.4, c("*"))  # bsl mod
+  text(-3.9,-16.7,cex=1.4, c("*")) #fix
+  text(-3.7,-22.2,cex=1.4, c("*")) #single band
 }
 
 
 # ### Assessment of Publication bias ######
 # #Publication bias Funnel plot
 
-#labels to numbers 
+#labels to numbers
 slab_funnel = data.frame(c(global_model$slab),seq(length(global_model$slab)))
 names(slab_funnel)  <- c("name","id")
 
@@ -716,13 +725,75 @@ rect(2.4,0.43,4.9,-0.005,density = NA, col = "#ffffff",border="black")
 text(2.6,seq(0.01,0.41,0.025), slab_funnel$id,adj=0)
 text(2.9,seq(0.01,0.41,0.025), slab_funnel$name,adj=0)
 
-# dev.print(pdf, file=eval(paste("Diagnostics/funnel_",correction[correction_mode],"_clean",remove_outliers,".pdf",sep="")))
-# #fail safe n
+dev.print(pdf, file=eval(paste("funnel_",correction[correction_mode],remove_outliers,".pdf",sep="")))
+
+#fail safe n
 # print(fsn(yi=g, vi = v,data=data_set)
 # print(fsn(yi=g, vi = v,data=data_set,type="Orwin",target =0.2))
 # 
 # #Rank Correlation Test
-# print(ranktest(res_rob))
-# 
+ print(ranktest(global_model))
 
+
+##### Subgroup Forest #### #
+
+par(xpd=NA)
+model_options <- c("res","res_cleaned")
+par(oma =c(0,0,0,0), mar= c(5,2,4,2),font=1,cex=0.8)
+
+for (i in 1: length(subsets_label)){
+
+  # print outlier model immediatly after the non cleaned model
+  if (subsets_label[i] %in% outlier_subsets_labels){ 
+    models_to_print <- 2
+  } else models_to_print <- 1 
+  
+  for (k in 1:models_to_print){
+    #get next subgroup
+    subgroup = eval(parse(text=paste(model_options[k],correction[correction_mode],subsets_label[i],sep = ".")))
+    #color cleaned models accordingly 
+    if(k==2){col<-"#c4d2ee"
+      description <- "REM w/o influential outliers for"
+    } else {col <-"#013394"
+      description <- "REM for"}
+    if (is.null(subgroup$random)){
+      model_label <- eval(uni_hetero(paste(description, subsets_label[i], sep=" "),subgroup))
+    } else if (grepl("effect_type",subgroup$random)) {
+      model_label <- eval(mv_hetero(paste(description, subsets_label[i], sep=" "),subgroup,c("s", "e")))
+    } else{
+      model_label <- eval(mv_hetero(paste(description, subsets_label[i], sep=" "),subgroup,c("s")))
+    }
+    waldi_sub <-forest(subgroup,
+                       addpred = TRUE,
+                       col=col,
+                       # ilab = cbind(subgroup$data$Direction,
+                       #              subgroup$data$Subjects,
+                       #              subgroup$data$grp1_size,
+                       #              data_set$Session,
+                       #              subgroup$data$number.of.sessions,
+                       #              subgroup$data$IF,
+                       #              subgroup$data$add_freq,
+                       #              subgroup$data$A,
+                       #              subgroup$data$B,
+                       #              subgroup$data$C,
+                       #              subgroup$data$D), 
+                       ylim=c(-1.5,15),
+                       xlim = c(-25.2,10),
+                       steps = 9,
+                       at = seq(-4,4),
+                       xlab = c(""),
+                       showweights = FALSE,
+                       mlab= model_label,
+                       #psize=0.9,
+                       header="Author(s) and Year")
+    title(paste(description, subsets_label[i]))
+    # xlabel 
+    text(0,-4, "Observed Outcome (Hedges' g)",font=1)
+    
+    dev.print(pdf, file=eval(paste("forest_",correction[correction_mode],"_",subsets_label[i],k,".pdf",sep="")))
+  }
+}
+
+#save workspaces to be loaded into jupyter notebook? 
+save.image(file=paste("C:/Users/User01/Documents/Software/MetaAnalysis/", correction[correction_mode],"_data.RData"))
 
