@@ -35,7 +35,7 @@ mv_hetero <- function(text, x, effects) {
   
   sigma_strings <- c()
   for (i in 1:length(effects)){
-   sigma_strings<- c(sigma_strings, paste(", σ²_", effects[i]," = ", (formatC(x$sigma2[i], digits=2, format="f")),sep=""))
+    sigma_strings<- c(sigma_strings, paste(", σ²_", effects[i]," = ", (formatC(x$sigma2[i], digits=2, format="f")),sep=""))
   }
   sigma_string <- paste(sigma_strings,collapse="")
   
@@ -43,14 +43,14 @@ mv_hetero <- function(text, x, effects) {
   Q_value <- formatC(x$QE, digits=2, format="f")
   
   paste(text, " (Q(", (x$k - x$p),") = ", (formatC(x$QE, digits=2, format="f")),
-               ", p ", (metafor:::.pval(x$QEp, digits=2, showeq=TRUE, sep="")),
-               ", I²", " = ", (formatC(x$I2, digits=1, format="f")), "%",
-               sigma_string, ")")}
+        ", p ", (metafor:::.pval(x$QEp, digits=2, showeq=TRUE, sep="")),
+        ", I²", " = ", (formatC(x$I2, digits=1, format="f")), "%",
+        sigma_string, ")")}
 
 #color forest plot
 
 color_forest_plot <- function(information, rows, x_pos,row_idx) {
-
+  
   ##color coding for the graphs: 
   transperent_color_set_DIAD <- c("#5EB5188C","#B2E8878C","#E07B7D8C", "#B5181B8C" )
   transperent_color_set_dir <- c("#0099998C","#93ffff8C")
@@ -59,7 +59,7 @@ color_forest_plot <- function(information, rows, x_pos,row_idx) {
   transperent_color_set_freq <- c("#e34a338C", "#fdbb848C")
   transperent_color_set_af <- c("#9ebcda8C", "#8856a78C")
   
-
+  
   j=1
   #direction
   dir_col <- match(information[j],c("↑","↓"))
@@ -96,13 +96,13 @@ color_forest_plot <- function(information, rows, x_pos,row_idx) {
     }
   }
 }
-  
+
 
 
 
 
 ############# SETTINGS #############
-correction_mode = 3
+correction_mode = 2
 remove_outliers <- TRUE
 
 effects <- list("mod", "bsl_pre_post", "bsl_mod")
@@ -110,11 +110,9 @@ correction <- c("chen", "con", "lib")
 
 
 ##Get Data 
-
-
-setwd("G:/Meine Ablage/PhD/Neurofeedback/FMT_MetaAnalysis")
 data <- read.csv("export_effect.csv",sep =",",fileEncoding="UTF-8-BOM")
 
+#data <- read.csv("export_effect2.csv",sep =",",fileEncoding="UTF-8-BOM")
 
 #### Start Analysis
 
@@ -316,7 +314,7 @@ for (k in 1:length(subsets)){
                          data=sub_set,
                          slab =names)
     
-  # use a univariate model if none of the above applies 
+    # use a univariate model if none of the above applies 
   } else {
     res <- rma(yi = as.numeric(g),
                vi=as.numeric(v),
@@ -327,7 +325,7 @@ for (k in 1:length(subsets)){
     res_non_robust <- res
   }
   
-
+  
   #calulate the Students residuals  (with non-robust model)
   stud_res <- residuals.rma(res_non_robust,type="rstudent")
   
@@ -343,7 +341,7 @@ for (k in 1:length(subsets)){
   print(paste("cutoff for outliers: 1.96"))
   print(paste("outliers: ", outliers))
   
-
+  
   print(paste("cutoff for influencers: ", median(cook)+6*IQR(cook)))
   print(paste("influencers: ", influencers))
   
@@ -363,9 +361,9 @@ res_investigate <- res_rob
 
 # # estimate variance
 profile(res_investigate,sigma=1)
-dev.print(pdf, file=eval(paste("profile_studyID_",correction[correction_mode],"_clean",remove_outliers,".pdf",sep="")))
+dev.print(pdf, file=eval(paste("Plots/profile_studyID_",correction[correction_mode],"_clean",remove_outliers,".pdf",sep="")))
 profile(res_investigate,sigma=2)
-dev.print(pdf, file=eval(paste("profile_effectType_",correction[correction_mode],"_clean",remove_outliers,".pdf",sep="")))
+dev.print(pdf, file=eval(paste("Plots/profile_effectType_",correction[correction_mode],"_clean",remove_outliers,".pdf",sep="")))
 
 
 # 
@@ -507,7 +505,7 @@ par(oma =c(0,0,0,0), mar= c(6,0,0,12),font=1,cex=0.8)
 waldi <-forest(global_model,
                xlim = c(-16.2,7.1),
                addpred = TRUE,
-               col="#9e0000",
+               col=c("#9e0000","#000000"),
                ilab = cbind(data_set$Direction,
                             data_set$Subjects,
                             data_set$grp1_size,
@@ -550,7 +548,7 @@ for (idx in 1:length(forest_rows)){
                    study$D)
   color_forest_plot(information, forest_rows, x_pos,idx)
 }
-  
+
 
 
 #add missing studies
@@ -571,11 +569,11 @@ for (study in 1:length(additional_studies)){
   text(-9*1.8,add_rows[study],pos=4, paste(add_study$Author,add_study$Year,sep=", "),cex=0.8)
   for (j in 1:length(information) ){
     text(x_pos[j],add_rows[study],information[j],cex=0.8)
-         }
+  }
   color_forest_plot(information, add_rows, x_pos, study)
 }
 
-  
+
 
 #w/o outlier
 addpoly(res_rob_cleaned, row=-2.4, mlab=eval(mv_hetero("REM w/o influential outliers",res_rob_cleaned,c("s","e"))),addpred=TRUE,col="#d28888")
@@ -587,6 +585,8 @@ y_pos_clean_subgroups <-c()
 model_options <- c("res","res_cleaned")
 
 
+sub_header_rows = c()
+
 for (i in 1: length(subsets_label)){
   # make sure the first three models are placed correctly
   if (i<=3){y_pos_subgroups <- poly_rows[4-i]} else if(i==4){y_pos_subgroups<- -2.1}
@@ -596,7 +596,10 @@ for (i in 1: length(subsets_label)){
     models_to_print <- 2
   } else models_to_print <- 1 
   # leave space between different influence factors 
-  if (i%%2==0 & i >3 ){y_pos_subgroups <- y_pos_subgroups -1} 
+  if (i%%2==0 & i >3 ){
+    y_pos_subgroups <- y_pos_subgroups -1
+    sub_header_rows <- c(sub_header_rows, y_pos_subgroups-0.5)}
+  
   for (k in 1:models_to_print){
     #write in the next row 
     if (i>3 | k>1) {y_pos_subgroups <- y_pos_subgroups -1.5}
@@ -623,10 +626,10 @@ for (i in 1: length(subsets_label)){
 
 # Add headers for columns
 text(c(-7.8,-6.6,-5.3,-4,8.95),33, pos=3,cex=.8, c("Direction",
-                                                  "Subjects",
-                                                  "Sessions",
-                                                  "Frequency",
-                                                  "Study DIAD - Risk of Bias"))
+                                                   "Subjects",
+                                                   "Sessions",
+                                                   "Frequency",
+                                                   "Study DIAD - Risk of Bias"))
 text(4.3,32, pos=3,cex=.8, c("p-value"))
 
 # Add sub headers for columns
@@ -642,10 +645,16 @@ text(c(x_pos[2:6],-3.65 ,x_pos[8:12]),32,pos=3,cex=.7, c("Effect",
 par(font=2,cex=0.7)
 
 ### add text for the subgroups
-text(-16, rev(header_rows), pos=4, c("Beginning vs. Ending of Neurofeedback",
-                                     "Resting State Baseline vs. After Neurofeedback",
-                                     "Resting State vs. Neurofeedback",
+text(-16, rev(header_rows), pos=4, c("Contrast 1 (mod)",
+                                     "Contrast 2 (bsl_pre_post",
+                                     "Contrast 3 (bsl_mod)",
                                      "Not included in the model"))
+
+
+text(-16, sub_header_rows, pos=4, c("Number of Sessions",
+                                    "Direction of Modulation",
+                                    "Individual versus Fixed Frequency",
+                                    "Number of Bands"))
 
 par(xpd=NA)
 
@@ -673,17 +682,17 @@ if (correction_mode==1){
   ### #  Chen #
   #text(-14.1,8.2,cex=0.8, c("†")) #Chen
   text(-5.5,5.5,cex=0.8, c("†"))  # bsl mod
-  text(-5.7,-6,cex=0.8, c("†"))#single
+  text(-3.75,-6,cex=0.8, c("†"))#single
   #Wang
   #text(-13.95,16.4,cex=1.4, c("*")) #Wang
   text(-5.14,-2,cex=1.4, c("*")) # overall model
   text(-5.32,5.7,cex=1.4, c("*"))  # bsl mod
   text(-3.85,-8.6,cex=1.4, c("*")) #multi
   text(-4.6,-14.2,cex=1.4, c("*")) #up
-  text(-4.04,-19.7,cex=1.4, c("*")) #fix
+  text(-4.15,-19.7,cex=1.4, c("*")) #fix
   
-  } else if (correction_mode == 2){
-
+} else if (correction_mode == 2){
+  
   ### #  Con #
   #text(-14.1,8.2,cex=0.8, c("†")) #Tseng
   text(-3.8,-20.7,cex=0.8, c("†"))#  multi
@@ -693,7 +702,7 @@ if (correction_mode==1){
   text(-3.9,-16.6,cex=1.4, c("*")) #fix
   text(-4.6,-11.2,cex=1.4, c("*")) #up
   
-  }else if (correction_mode == 3){
+}else if (correction_mode == 3){
   
   ### #  Lib  ##
   #text(-14.1,8.2,cex=0.8, c("†")) #Chen
@@ -703,11 +712,11 @@ if (correction_mode==1){
   #text(-13.95,16.4,cex=1.4, c("*")) #Wang
   text(-5.22,-2,cex=1.4, c("*")) # overall model
   text(-5.54,5.7,cex=1.4, c("*"))  # bsl mod
-  text(-3.9,-16.7,cex=1.4, c("*")) #fix
+  text(-4.22,-16.7,cex=1.4, c("*")) #fix
   text(-3.7,-22.2,cex=1.4, c("*")) #single band
 }
 
-
+dev.print(pdf, file=eval(paste("Plots/giant_",correction[correction_mode],remove_outliers,".pdf",sep="")))
 # ### Assessment of Publication bias ######
 # #Publication bias Funnel plot
 
@@ -725,14 +734,62 @@ rect(2.4,0.43,4.9,-0.005,density = NA, col = "#ffffff",border="black")
 text(2.6,seq(0.01,0.41,0.025), slab_funnel$id,adj=0)
 text(2.9,seq(0.01,0.41,0.025), slab_funnel$name,adj=0)
 
-dev.print(pdf, file=eval(paste("funnel_",correction[correction_mode],remove_outliers,".pdf",sep="")))
+dev.print(pdf, file=eval(paste("Plots/funnel_",correction[correction_mode],remove_outliers,".pdf",sep="")))
+
+
+
+theme_custom <- function() { 
+  theme_grey(base_size = 15) %+replace% 
+    theme(
+      # Set the plot title and axis titles styles
+      plot.title = element_text(face = "bold", hjust = 0.5),
+      axis.title = element_text(face = "bold", size = 14),
+      
+      # Set the axis text styles
+      axis.text = element_text(size = 12),
+      
+      # Modify legend styling
+      legend.position = "right",
+      legend.text = element_text(size = 10),
+      legend.title = element_text(face = "bold"),
+      
+      # Remove panel grid
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      panel.grid.major.y = element_line(color = "white"),  # Horizontal grid lines
+      
+      # Set panel background color
+      panel.background = element_rect(fill = "grey80", colour = NA),
+      
+      # Add border only on the left and bottom side of the plot
+      panel.border = element_blank(), # remove all borders
+      axis.line.x = element_line(color="black", size=0.5), # bottom border
+      axis.line.y = element_line(color="black", size=0.5)  # left border
+      
+      # Set the strip text style for facet grids
+      #strip.text = element_text(face = "bold", size = 12),
+      
+      # Plot margin
+      # plot.margin = unit(c(1, 1, 1, 1), "cm")
+    )
+}
+
+
+
+ggplot(data=data, aes(x=p_value))+
+  geom_histogram(color = "white", fill = "grey30")+ theme_custom() +
+  xlab("p-value")+
+  ylab("Number of Effects")
+#ggtitle("P-Value distribution of the included") + 
+
+
 
 #fail safe n
 # print(fsn(yi=g, vi = v,data=data_set)
 # print(fsn(yi=g, vi = v,data=data_set,type="Orwin",target =0.2))
 # 
 # #Rank Correlation Test
- print(ranktest(global_model))
+print(ranktest(global_model))
 
 
 ##### Subgroup Forest #### #
@@ -742,7 +799,7 @@ model_options <- c("res","res_cleaned")
 par(oma =c(0,0,0,0), mar= c(5,2,4,2),font=1,cex=0.8)
 
 for (i in 1: length(subsets_label)){
-
+  
   # print outlier model immediatly after the non cleaned model
   if (subsets_label[i] %in% outlier_subsets_labels){ 
     models_to_print <- 2
@@ -790,10 +847,10 @@ for (i in 1: length(subsets_label)){
     # xlabel 
     text(0,-4, "Observed Outcome (Hedges' g)",font=1)
     
-    dev.print(pdf, file=eval(paste("forest_",correction[correction_mode],"_",subsets_label[i],k,".pdf",sep="")))
+    dev.print(pdf, file=eval(paste("Plots/forest_",correction[correction_mode],"_",subsets_label[i],k,".pdf",sep="")))
   }
 }
 
 #save workspaces to be loaded into jupyter notebook? 
-save.image(file=paste("C:/Users/User01/Documents/Software/MetaAnalysis/", correction[correction_mode],"_data.RData"))
+save.image(file=paste("Plots/", correction[correction_mode],"_data.RData"))
 

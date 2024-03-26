@@ -1,11 +1,10 @@
 
 
 ################## Load  Data
-setwd("G:/Meine Ablage/PhD/FMT_MetaAnalysis")
 data <- read.csv("export_effect.csv",sep =",",fileEncoding="UTF-8-BOM")
 
 correction <- c("chen", "con", "lib")
-correction_mode = 1
+correction_mode = 2
 remove_outliers <- FALSE
 ################ Select correction mode
 if (remove_outliers){
@@ -118,3 +117,4 @@ for (i in 1:4){
     print(paste(options[k],length(items[i][items[[i]]==options[k]])))
   }
 }
+
